@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[20]:
+# In[121]:
 
 
 import pandas as pd
@@ -11,22 +11,21 @@ from surprise import KNNBasic, SVD, Reader, Dataset
 from collections import defaultdict
 
 
-# In[3]:
+# In[88]:
 
 
 #Read processed csv
 beer3 = pd.read_csv('C:/Users/vorbej1/Beer-Engine/beer3.csv')
 
 
-# In[5]:
+# In[89]:
 
 
 #Convert columns to appropriate format
-beer3['userId'] = beer3['userId'].astype('str')
-beer3['beer_beerid'] = beer3['beer_beerid'].astype('str')
+beer3[['userId','beer_beerid']] = beer3[['userId', 'beer_beerid']].apply(lambda x: x.astype(str))
 
 
-# In[6]:
+# In[90]:
 
 
 #Create and prepare training set for model input
@@ -35,20 +34,20 @@ training_set = Dataset.load_from_df(beer3[['userId', 'beer_beerid', 'review_over
 training_set = training_set.build_full_trainset()
 
 
-# In[7]:
+# In[91]:
 
 
 #Set model parameters - kNN & SVDD
 sim_options = {
-    'name': 'cosine',
+    'name': 'pearson_baseline',
     'user_based': True
 }
  
-knn = KNNBasic(sim_options=sim_options, k=20)
+knn = KNNBasic(sim_options=sim_options, k=10)
 svd = SVD()
 
 
-# In[8]:
+# In[92]:
 
 
 #Train model
@@ -56,23 +55,74 @@ svd = SVD()
 svd.fit(training_set)
 
 
-# In[9]:
+# In[101]:
+
+
+joblib.dump(svd, 'model.pkl')
+
+
+# In[104]:
+
+
+joe = joblib.load('model.pkl')
+joe
+
+
+# In[122]:
+
+
+app = Flask(__name__)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    if joe:
+        try:
+            json_ = request.json
+            print(json_)
+            query = pd.get_dummies(pd.DataFrame(json_))
+            query = query.reindex(fill_value=0)
+
+            prediction = list(joe.test(query))
+
+            return jsonify({'prediction': str(prediction)})
+
+        except:
+
+            return jsonify({'trace': traceback.format_exc()})
+    else:
+        print ('Train the model first')
+        return ('No model here to use')
+    
+if __name__ == '__main__':
+    try:
+        port = int(sys.argv[1]) # This is for a command-line input
+    except:
+        port = 12345 # If you don't provide any port the port will be set to 12345
+
+    test = joblib.load("model.pkl") # Load "model.pkl"
+    print ('Model loaded')
+        #model_columns = joblib.load("model_columns.pkl") # Load "model_columns.pkl"
+        #print ('Model columns loaded')
+
+    app.run(port=port, debug=True,use_reloader = False)
+
+
+# In[93]:
 
 
 #Create testset from training set..anti testset will predict based off the beers users didnt review
 test_set = training_set.build_testset()
-#testset2 = training_set.build_anti_testset()
 
 
-# In[10]:
+# In[94]:
 
 
 #Predict for each user in the test set - kNN & SVD
-#predictions = knn.test(test_set)
+#predictions = knn.test(testset3)
 predictions = svd.test(test_set)
 
 
-# In[11]:
+# In[9]:
 
 
 #Function to provide top 3 recommendations for each user and output as list
@@ -89,7 +139,7 @@ def get_top3_recommendations(predictions, topN = 3):
     return top_recs
 
 
-# In[12]:
+# In[10]:
 
 
 #Map beer ids to beer names using beer3 csv
@@ -105,7 +155,7 @@ def read_item_names():
     return rid_to_name
 
 
-# In[2]:
+# In[285]:
 
 
 #Prints top 3 recommended beers as dictionary values..converts beer id to beer name
@@ -117,7 +167,7 @@ for uid, user_ratings in top3_recommendations.items():
     print (uid, [rid_to_name[iid] for (iid, _) in user_ratings])
 
 
-# In[432]:
+# In[12]:
 
 
 #Predictions on data outside the training set
@@ -125,7 +175,7 @@ for uid, user_ratings in top3_recommendations.items():
 #beer1 = beer1.iloc[100001:103000,:]
 
 
-# In[433]:
+# In[13]:
 
 
 #Processing
@@ -134,7 +184,7 @@ for uid, user_ratings in top3_recommendations.items():
 #beer1['beer_beerid'] = beer1['beer_beerid'].astype('str')
 
 
-# In[434]:
+# In[14]:
 
 
 #Create testset
@@ -143,7 +193,7 @@ for uid, user_ratings in top3_recommendations.items():
 #test_3 = test_3.build_testset()
 
 
-# In[445]:
+# In[15]:
 
 
 #Predictions
@@ -151,29 +201,38 @@ for uid, user_ratings in top3_recommendations.items():
 #predictions3 = knn.test(test_3)
 
 
-# In[14]:
+# In[96]:
 
 
 #Function to accept user input and recommened new craft beers - user input to be 3 inputs
 def user_input(x,y,z):
     frame = beer3.append({'userId':x,'beer_beerid':y,'review_overall':z}, ignore_index=True) #Append users beer revies to dataframe of reviews
-    frame['userId'] = frame['userId'].astype(str)  #Convert columns to appropriate formats
-    frame['beer_beerid'] = frame['beer_beerid'].astype(str)
+    frame[['userId','beer_beerid']] = frame[['userId', 'beer_beerid']].apply(lambda x: x.astype(str))
     frame['review_overall'] = frame['review_overall'].astype('float64')
-
- 
-    iids = frame['beer_beerid'].unique() #Obtain list of all beer Ids
-    iids2 = frame.loc[frame['userId'] == x, 'beer_beerid'] #Obtain list of ids that user has rated wh
-    iids_to_pred = np.setdiff1d(iids,iids2)
-                         
-    testtest = [[x, beer_beerid, 5] for beer_beerid in iids_to_pred]         
-    predictions2 = svd.test(testtest) #Predict
     
-    return predictions2
+    iids = frame['beer_beerid'].unique() #Obtain list of all beer Ids
+    iids2 = frame.loc[frame['userId'] == x, 'beer_beerid'] #Obtain list of ids that user has rated
+    iids_to_pred = np.setdiff1d(iids,iids2) #List of all beers user didn't rate
+                         
+    testtest = [[x, beer_beerid, 4.5] for beer_beerid in iids_to_pred] #Array of beers to predict for users      
+    predictions2 = pd.DataFrame(svd.test(testtest)) #Predict and convert to DataFrame
+    
+    predictions2 = predictions2.sort_values(by=['est'], ascending = False)[:5] #Obtain top 5 predictions
+    predictions3 = predictions2.merge(beer3[['beer_name','beer_beerid','beer_abv','beer_style']], left_on='iid',right_on='beer_beerid').drop_duplicates(['beer_beerid']) #Join predictions to beer3 to obtain additional information
+    
+    predictions3 = predictions3[['beer_name','beer_abv','beer_style']].to_dict() #Convert desired output to dictionary for iOS output
+    
+    return predictions3
 
 
-# In[17]:
+# In[97]:
 
 
-new_recs = user_input('100000','1550',5)
+new_recs = user_input('189898','6748', 5)
+
+
+# In[98]:
+
+
+new_recs
 
