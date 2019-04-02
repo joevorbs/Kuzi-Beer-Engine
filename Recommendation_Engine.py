@@ -55,58 +55,6 @@ svd = SVD()
 svd.fit(training_set)
 
 
-# In[101]:
-
-
-joblib.dump(svd, 'model.pkl')
-
-
-# In[104]:
-
-
-joe = joblib.load('model.pkl')
-joe
-
-
-# In[122]:
-
-
-app = Flask(__name__)
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    if joe:
-        try:
-            json_ = request.json
-            print(json_)
-            query = pd.get_dummies(pd.DataFrame(json_))
-            query = query.reindex(fill_value=0)
-
-            prediction = list(joe.test(query))
-
-            return jsonify({'prediction': str(prediction)})
-
-        except:
-
-            return jsonify({'trace': traceback.format_exc()})
-    else:
-        print ('Train the model first')
-        return ('No model here to use')
-    
-if __name__ == '__main__':
-    try:
-        port = int(sys.argv[1]) # This is for a command-line input
-    except:
-        port = 12345 # If you don't provide any port the port will be set to 12345
-
-    test = joblib.load("model.pkl") # Load "model.pkl"
-    print ('Model loaded')
-        #model_columns = joblib.load("model_columns.pkl") # Load "model_columns.pkl"
-        #print ('Model columns loaded')
-
-    app.run(port=port, debug=True,use_reloader = False)
-
-
 # In[93]:
 
 
