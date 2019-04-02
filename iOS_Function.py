@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[128]:
 
 
 import pandas as pd
@@ -11,21 +11,21 @@ from sklearn.externals import joblib
 from collections import defaultdict
 
 
-# In[2]:
+# In[129]:
 
 
 #Read processed csv
 beer3 = pd.read_csv('C:/Users/vorbej1/Beer-Engine/beer3.csv')
 
 
-# In[3]:
+# In[130]:
 
 
 #Convert columns to appropriate format
 beer3[['userId','beer_beerid']] = beer3[['userId', 'beer_beerid']].apply(lambda x: x.astype(str))
 
 
-# In[4]:
+# In[131]:
 
 
 #Create and prepare training set for model input
@@ -34,7 +34,7 @@ training_set = Dataset.load_from_df(beer3[['userId', 'beer_beerid', 'review_over
 training_set = training_set.build_full_trainset()
 
 
-# In[5]:
+# In[132]:
 
 
 #Set model parameters - kNN & SVD
@@ -47,7 +47,7 @@ knn = KNNBasic(sim_options=sim_options, k=10)
 svd = SVD()
 
 
-# In[14]:
+# In[139]:
 
 
 #Train model
@@ -55,26 +55,26 @@ svd = SVD()
 svd.fit(training_set)
 
 
-# In[12]:
+# In[140]:
 
 
 #Save Model
 joblib.dump(svd, 'recommender_model')
 
 
-# In[8]:
+# In[135]:
 
 
 #Load Model for API
 svd_iOS = joblib.load('recommender_model')
 
 
-# In[9]:
+# In[136]:
 
 
 #Function to accept user input and recommened new craft beers
 def user_input():
-    input_test = pd.DataFrame(pd.read_json('[{"userId": "101010", "beer_name": "Humulus Lager"}]')) #JSON input from user
+    input_test = pd.DataFrame(pd.read_json('{"userId": ["101010","101010","101010"], "beer_name": ["Stoudts American Pale Ale","Founders KBS (Kentucky Breakfast Stout)","Founders CBS Imperial Stout"]}')) #JSON input from user
     input_test['beer_beerid'] = pd.DataFrame(beer3.loc[beer3['beer_name'].isin(input_test['beer_name']), 'beer_beerid'].unique()) #Obtain beer id for beer name given by user
     input_test['userId'] = input_test['userId'].astype(str) #Convert userId column to appropriate format for append
     frame = beer3.append(input_test, sort=True) #Append info to dataframe of all beer reviews 
@@ -83,7 +83,7 @@ def user_input():
     frame['review_overall'] = frame['review_overall'].astype('float64')
     
     iids = frame['beer_beerid'].unique() #Obtain list of all beer Ids
-    iids2 = frame.loc[frame['userId'][:0], 'beer_beerid'] #Obtain list of ids that user has rated
+    iids2 = frame.loc[frame['userId'].isin(input_test['userId']), 'beer_beerid'] #Obtain list of ids that user has rated
     iids_to_pred = np.setdiff1d(iids,iids2) #List of all beers user didn't rate
                          
     testtest = [['user', beer_beerid, 4.5] for beer_beerid in iids_to_pred] #Array of beers to predict for users      
@@ -97,13 +97,13 @@ def user_input():
     return predictions3
 
 
-# In[10]:
+# In[137]:
 
 
 result = user_input()
 
 
-# In[13]:
+# In[141]:
 
 
 result
