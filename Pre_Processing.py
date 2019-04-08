@@ -1,70 +1,70 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[1]:
 
 
 import pandas as pd
 import numpy as np
 
 
-# In[3]:
+# In[2]:
 
 
 #Read Csv
 beer1 = pd.read_csv('C:/Users/Vorbej1/Desktop/beer.csv')
 
 
-# In[4]:
+# In[3]:
 
 
 #Subset data 
 beer2 = beer1[:100000]
 
 
-# In[1]:
+# In[4]:
 
 
 #Assign unique id to reviewers
 beer2['userId'] = beer2.groupby(['review_profilename']).ngroup()
 
 
-# In[6]:
+# In[5]:
 
 
 #Filter out beers with blank reviews and users with no profile name(user # 1)
 beer2 = beer2[(beer2['review_overall'] > 0) & (beer2['userId'] > 1)]
 
 
-# In[7]:
+# In[6]:
 
 
 #Filter out reviewers who reviewed less than 3 beers
 beer2 = beer2.groupby('userId').filter(lambda x: x['userId'].count()>=3)
 
 
-# In[8]:
+# In[7]:
 
 
 #Select relevant columns
 beer2 = beer2[['userId','beer_beerid', 'beer_name', 'beer_style','beer_abv','review_overall','review_time']]
 
 
-# In[9]:
+# In[8]:
 
 
 #Sort so most recent reviews are first when users rated the same beer 2x
 beer2 =  beer2.sort_values(by=['userId','beer_beerid', 'beer_name', 'beer_style','beer_abv','review_overall','review_time'], ascending = True)
 
 
-# In[10]:
+# In[9]:
 
 
 #Take first row where user reviewed same beer 2x..most current review will now be taken
 beer2 = beer2.groupby(['userId','beer_beerid']).first().reset_index()
 
 
-# In[11]:
+# In[10]:
 
 
 #Identify beers that are given more than one unique ID and keep first
@@ -74,7 +74,7 @@ beer_names = beer_names.sort_values(by=['beer_name','beer_beerid'])
 beer_names = beer_names.loc[beer_names['beer_name'] != beer_names['beer_name'].shift()]
 
 
-# In[12]:
+# In[11]:
 
 
 #Join now unique ids back to original dataframe so beers only have 1 unique id
@@ -83,14 +83,14 @@ beer3 = beer3.drop(['beer_name_y'], axis=1)
 beer3 = beer3.rename(columns={'beer_name_x' :'beer_name'})
 
 
-# In[13]:
+# In[12]:
 
 
 #Filter out beers that are only rated once
-beer2 = beer2.groupby('beer_beerid').filter(lambda x: x['beer_beerid'].count()>1)
+beer3 = beer3.groupby('beer_beerid').filter(lambda x: x['beer_beerid'].count()>1)
 
 
-# In[14]:
+# In[13]:
 
 
 #Write to csv for model and dictionary mapping
